@@ -51,9 +51,9 @@ impl Playing {
         if playing {
             let track_data: TrackData = serde_json::from_str(&message[..]).unwrap();
             let now_playing = NowPlaying::from(track_data);
-            println!("\u{1F3B6}{} by {}", now_playing.title, now_playing.artist);
+            println!("{} by {}", now_playing.title, now_playing.artist);
         } else {
-            println!("\u{1F3B6}Nothing playing at the moment");
+            println!("Nothing playing at the moment");
         }
     }
 }

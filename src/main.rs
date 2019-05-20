@@ -25,7 +25,7 @@ impl Handler for Client {
         self.out.close(CloseCode::Normal)
     }
     fn on_error(&mut self, _err: Error) {
-        println!("\u{1F3B6}GPMDP isn't running");
+        println!("GPMDP isn't running");
     }
 }
 
