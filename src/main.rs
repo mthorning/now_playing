@@ -1,38 +1,26 @@
-use serde_json::Value;
-use ws::{connect, CloseCode, Error, Handler, Message, Result, Sender};
+use os_type;
 
-use now_playing::Playing;
+use now_playing::playback_api::Data;
+use now_playing::track::Track;
 
-struct Client {
-    out: Sender,
-    playing: Playing,
-}
+const LINUX_PATH: &str = ".config/Google Play Music Desktop Player/json_store/playback.json";
 
-impl Handler for Client {
-    fn on_message(&mut self, msg: Message) -> Result<()> {
-        match msg {
-            Message::Text(message) => {
-                let data: Value = serde_json::from_str(&message[..]).unwrap();
-                if data["channel"] == "playState" {
-                    self.playing.set_playing(message);
-                } else if data["channel"] == "track" {
-                    Playing::get_now_playing(message, self.playing.is_playing.get());
-                }
-            }
-            _ => println!(),
-        };
-
-        self.out.close(CloseCode::Normal)
-    }
-    fn on_error(&mut self, _err: Error) {
-        println!("GPMDP isn't running");
-    }
-}
+const MAC_PATH: &str =
+    "Library/Application Support/Google Play Music Desktop Player/json_store/playback.json";
 
 fn main() {
-    connect("ws://localhost:5672", |out| {
-        let playing = Playing::new();
-        Client { out, playing }
-    })
-    .unwrap();
+    let json_location = match os_type::current_platform().os_type {
+        os_type::OSType::OSX => MAC_PATH,
+        _ => LINUX_PATH,
+    };
+    let data = Data::new(json_location);
+    let track = match Track::from(data.contents) {
+        Ok(track) => track,
+        Err(_) => return println!("Not connected"),
+    };
+
+    match track.playing {
+        true => println!("{} by {}", track.title, track.artist),
+        false => println!("Nothing playing"),
+    };
 }

@@ -1,59 +1,56 @@
-use serde::{Deserialize, Serialize};
-use std::cell::Cell;
+pub mod track {
+    use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
-struct TrackData {
-    channel: String,
-    payload: Payload,
-}
+    #[derive(Deserialize, Serialize)]
+    struct TrackData {
+        playing: bool,
+        song: Song,
+    }
 
-#[derive(Deserialize, Serialize)]
-struct Payload {
-    title: String,
-    artist: String,
-    album: String,
-}
+    #[derive(Deserialize, Serialize)]
+    struct Song {
+        title: String,
+        artist: String,
+    }
 
-struct NowPlaying {
-    title: String,
-    artist: String,
-}
+    pub struct Track {
+        pub title: String,
+        pub artist: String,
+        pub playing: bool,
+    }
 
-impl NowPlaying {
-    fn from(track_data: TrackData) -> NowPlaying {
-        NowPlaying {
-            title: track_data.payload.title,
-            artist: track_data.payload.artist,
+    impl Track {
+        pub fn from(track_json: String) -> Result<Track, ()> {
+            let track_data: TrackData = match serde_json::from_str(&track_json[..]) {
+                Ok(json) => json,
+                Err(_) => return Err(()),
+            };
+            Ok(Track {
+                title: track_data.song.title,
+                artist: track_data.song.artist,
+                playing: track_data.playing,
+            })
         }
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct PlayState {
-    payload: bool,
-}
+pub mod playback_api {
+    use dirs;
+    use std::fs::File;
+    use std::io::Read;
 
-pub struct Playing {
-    pub is_playing: Cell<bool>,
-}
+    pub struct Data {
+        pub contents: String,
+    }
 
-impl Playing {
-    pub fn new() -> Playing {
-        Playing {
-            is_playing: Cell::new(false),
-        }
-    }
-    pub fn set_playing(&self, message: String) {
-        let play_state: PlayState = serde_json::from_str(&message[..]).unwrap();
-        self.is_playing.set(play_state.payload);
-    }
-    pub fn get_now_playing(message: String, playing: bool) {
-        if playing {
-            let track_data: TrackData = serde_json::from_str(&message[..]).unwrap();
-            let now_playing = NowPlaying::from(track_data);
-            println!("{} by {}", now_playing.title, now_playing.artist);
-        } else {
-            println!("Nothing playing at the moment");
+    impl Data {
+        pub fn new(json_location: &str) -> Data {
+            let home = dirs::home_dir().unwrap();
+            let path = home.join(json_location);
+            let mut file = File::open(path).unwrap();
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).unwrap();
+            Data { contents }
         }
     }
 }
